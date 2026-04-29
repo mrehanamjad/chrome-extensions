@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Ask AI Assistant",
+  "version": "1.0",
+  "description": "Highlight text to ask AI questions using local Ollama or cloud APIs.",
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": ["<all_urls>", "http://localhost:11434/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "css": ["highlight-github.min.css", "content.css"],
+      "js": ["marked.min.js", "highlight.min.js", "content.js"]
+    }
+  ],
+  "options_page": "options.html",
+  "action": {
+    "default_title": "Settings",
+    "default_popup": "options.html"
+  }
+}

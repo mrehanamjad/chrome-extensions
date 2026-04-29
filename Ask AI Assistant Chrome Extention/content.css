@@ -1,0 +1,709 @@
+/* ============================================================
+   AI Assistant Chrome Extension — Content UI Stylesheet
+   Design Language: Premium Minimalist / Glassmorphism
+   Inspired by: Notion, Linear, Vercel
+   ============================================================ */
+
+/* ── Design Tokens ────────────────────────────────────────── */
+:root {
+  --ai-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  /* Monochromatic palette */
+  --ai-bg:          rgba(255, 255, 255, 0.78);
+  --ai-bg-surface:  rgba(250, 250, 250, 0.85);
+  --ai-bg-chat:     rgba(245, 245, 247, 0.60);
+  --ai-border:      rgba(0, 0, 0, 0.08);
+  --ai-border-soft: rgba(0, 0, 0, 0.05);
+
+  --ai-text-primary:   #0a0a0a;
+  --ai-text-secondary: #6b7280;
+  --ai-text-muted:     #9ca3af;
+
+  --ai-accent:         #0a0a0a;
+  --ai-accent-hover:   #1f1f1f;
+
+  --ai-msg-ai-bg:      rgba(240, 240, 243, 0.90);
+  --ai-msg-user-bg:    #0a0a0a;
+  --ai-msg-user-text:  #ffffff;
+
+  /* Shadows — soft and diffuse */
+  --ai-shadow-popup:   0 8px 40px rgba(0, 0, 0, 0.12),
+                       0 2px 12px rgba(0, 0, 0, 0.06),
+                       0 0 0 1px rgba(0, 0, 0, 0.06);
+  --ai-shadow-fab:     0 4px 16px rgba(0, 0, 0, 0.18),
+                       0 1px 4px rgba(0, 0, 0, 0.10);
+  --ai-shadow-btn:     0 1px 3px rgba(0, 0, 0, 0.08);
+
+  /* Motion */
+  --ai-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --ai-duration: 220ms;
+}
+
+
+/* ── Floating Action Button ───────────────────────────────── */
+#ask-ai-fab {
+  position: absolute;
+  z-index: 2147483647;
+
+  display: none;
+  align-items: center;
+  gap: 5px;
+
+  background: rgba(10, 10, 10, 0.88);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 6px 12px;
+
+  font-family: var(--ai-font);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  line-height: 1.4;
+  white-space: nowrap;
+
+  cursor: pointer;
+  box-shadow: var(--ai-shadow-fab);
+
+  animation: ai-fab-in var(--ai-duration) var(--ai-ease) both;
+  transition: transform var(--ai-duration) var(--ai-ease),
+              box-shadow var(--ai-duration) var(--ai-ease),
+              background var(--ai-duration) ease;
+}
+
+#ask-ai-fab:hover {
+  background: rgba(30, 30, 30, 0.95);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22), 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+#ask-ai-fab:active {
+  transform: translateY(0);
+}
+
+@keyframes ai-fab-in {
+  from { opacity: 0; transform: translateY(4px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+
+/* ── Chat Popup Container ─────────────────────────────────── */
+#ask-ai-popup {
+  position: fixed;
+  z-index: 2147483647;
+  top: 20px;
+  right: 20px;
+
+  width: 360px;
+  min-height: 420px;
+  max-height: 600px;
+
+  display: none;
+  flex-direction: column;
+
+  /* Glassmorphism */
+  background: var(--ai-bg);
+  backdrop-filter: blur(24px) saturate(200%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+
+  border: 1px solid var(--ai-border);
+  border-radius: 16px;
+  box-shadow: var(--ai-shadow-popup);
+
+  font-family: var(--ai-font);
+  font-size: 14px;
+  color: var(--ai-text-primary);
+  line-height: 1.5;
+
+  resize: both;
+  overflow: hidden;
+
+  animation: ai-popup-in var(--ai-duration) var(--ai-ease) both;
+}
+
+@keyframes ai-popup-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+
+/* ── Header ───────────────────────────────────────────────── */
+#ask-ai-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 13px;
+
+  background: transparent;
+  border-bottom: 1px solid var(--ai-border-soft);
+
+  cursor: grab;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+#ask-ai-header:active {
+  cursor: grabbing;
+}
+
+#ask-ai-header > span:first-child {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ai-text-primary);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+
+/* ── Header Icon Buttons (Settings & Close) ───────────────── */
+#ask-ai-settings,
+#ask-ai-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+
+  font-size: 15px;
+  line-height: 1;
+  color: var(--ai-text-muted);
+
+  cursor: pointer;
+  transition: background var(--ai-duration) ease,
+              color var(--ai-duration) ease;
+}
+
+#ask-ai-settings:hover,
+#ask-ai-close:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--ai-text-primary);
+}
+
+#ask-ai-close {
+  font-size: 18px;
+}
+
+
+/* ── Clear Chat Button ────────────────────────────────────── */
+#ask-ai-clear {
+  font-family: var(--ai-font);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--ai-text-muted);
+
+  background: transparent;
+  border: 1px solid var(--ai-border);
+  border-radius: 20px;
+  padding: 3px 9px;
+  height: 22px;
+
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--ai-duration) ease,
+              color var(--ai-duration) ease,
+              border-color var(--ai-duration) ease;
+}
+
+#ask-ai-clear:hover {
+  background: rgba(220, 38, 38, 0.07);
+  border-color: rgba(220, 38, 38, 0.25);
+  color: #dc2626;
+}
+
+#ask-ai-clear:active {
+  background: rgba(220, 38, 38, 0.12);
+}
+
+
+/* ── Chat Message Area ────────────────────────────────────── */
+#ask-ai-chat {
+  flex: 1;
+  padding: 14px 14px 10px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--ai-bg-chat);
+
+  /* Custom scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.12) transparent;
+}
+
+#ask-ai-chat::-webkit-scrollbar {
+  width: 4px;
+}
+#ask-ai-chat::-webkit-scrollbar-track {
+  background: transparent;
+}
+#ask-ai-chat::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
+}
+#ask-ai-chat::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.22);
+}
+
+
+/* ── Message Bubbles ──────────────────────────────────────── */
+.ai-msg,
+.user-msg {
+  max-width: 88%;
+  padding: 9px 13px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  animation: ai-msg-in 200ms var(--ai-ease) both;
+}
+
+@keyframes ai-msg-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* AI message */
+.ai-msg {
+  align-self: flex-start;
+  background: var(--ai-msg-ai-bg);
+  color: var(--ai-text-primary);
+  border: 1px solid var(--ai-border-soft);
+  border-bottom-left-radius: 4px;
+
+  /* Copy affordance */
+  cursor: pointer;
+  transition: background var(--ai-duration) ease;
+}
+
+.ai-msg:hover {
+  background: rgba(235, 235, 238, 0.95);
+}
+
+/* User message */
+.user-msg {
+  align-self: flex-end;
+  background: var(--ai-msg-user-bg);
+  color: var(--ai-msg-user-text);
+  border-bottom-right-radius: 4px;
+}
+
+
+/* ── Controls Panel ───────────────────────────────────────── */
+#ask-ai-controls {
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--ai-border-soft);
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  flex-shrink: 0;
+}
+
+
+/* ── Quick Action Chips ───────────────────────────────────── */
+.ai-quick-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ai-quick-actions button {
+  font-family: var(--ai-font);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--ai-text-secondary);
+
+  padding: 5px 10px;
+  border: 1px solid var(--ai-border);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.7);
+
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: var(--ai-shadow-btn);
+
+  transition: background var(--ai-duration) ease,
+              color var(--ai-duration) ease,
+              border-color var(--ai-duration) ease,
+              transform var(--ai-duration) var(--ai-ease),
+              box-shadow var(--ai-duration) ease;
+}
+
+.ai-quick-actions button:hover {
+  background: rgba(10, 10, 10, 0.06);
+  border-color: rgba(0, 0, 0, 0.14);
+  color: var(--ai-text-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.10);
+}
+
+.ai-quick-actions button:active {
+  transform: translateY(0);
+}
+
+/* Dark-mode toggle chip inherits same styles above */
+
+
+/* ── Input Row ────────────────────────────────────────────── */
+#ask-ai-input-wrapper {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+#ask-ai-input {
+  flex: 1;
+  padding: 9px 12px;
+  border: 1px solid var(--ai-border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.8);
+
+  font-family: var(--ai-font);
+  font-size: 13px;
+  color: var(--ai-text-primary);
+  line-height: 1.4;
+
+  outline: none;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: border-color var(--ai-duration) ease,
+              box-shadow var(--ai-duration) ease;
+}
+
+#ask-ai-input::placeholder {
+  color: var(--ai-text-muted);
+}
+
+#ask-ai-input:focus {
+  border-color: rgba(0, 0, 0, 0.24);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.04),
+              0 0 0 3px rgba(0, 0, 0, 0.06);
+}
+
+#ask-ai-send {
+  flex-shrink: 0;
+  padding: 9px 16px;
+  background: var(--ai-accent);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+
+  font-family: var(--ai-font);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.20);
+  transition: background var(--ai-duration) ease,
+              transform var(--ai-duration) var(--ai-ease),
+              box-shadow var(--ai-duration) ease;
+}
+
+#ask-ai-send:hover {
+  background: var(--ai-accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+}
+
+#ask-ai-send:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.16);
+}
+
+
+/* ── Dark Mode ────────────────────────────────────────────── */
+#ask-ai-popup.dark-mode {
+  --ai-bg:          rgba(18, 18, 20, 0.88);
+  --ai-bg-surface:  rgba(24, 24, 27, 0.90);
+  --ai-bg-chat:     rgba(12, 12, 14, 0.72);
+  --ai-border:      rgba(255, 255, 255, 0.08);
+  --ai-border-soft: rgba(255, 255, 255, 0.05);
+
+  --ai-text-primary:   #f2f2f5;
+  --ai-text-secondary: #8b8b9a;
+  --ai-text-muted:     #5c5c70;
+
+  --ai-accent:       #e8e8ec;
+  --ai-accent-hover: #ffffff;
+
+  --ai-msg-ai-bg:    rgba(30, 30, 35, 0.90);
+  --ai-msg-user-bg:  #e8e8ec;
+  --ai-msg-user-text: #0a0a0a;
+
+  background: var(--ai-bg);
+  color: var(--ai-text-primary);
+  border-color: var(--ai-border);
+}
+
+#ask-ai-popup.dark-mode #ask-ai-input {
+  background: rgba(30, 30, 35, 0.80);
+  color: var(--ai-text-primary);
+  border-color: var(--ai-border);
+}
+
+#ask-ai-popup.dark-mode #ask-ai-input::placeholder {
+  color: var(--ai-text-muted);
+}
+
+#ask-ai-popup.dark-mode .ai-quick-actions button {
+  background: rgba(30, 30, 35, 0.70);
+  color: var(--ai-text-secondary);
+  border-color: var(--ai-border);
+}
+
+#ask-ai-popup.dark-mode .ai-quick-actions button:hover {
+  background: rgba(50, 50, 58, 0.90);
+  color: var(--ai-text-primary);
+}
+
+#ask-ai-popup.dark-mode #ask-ai-send {
+  background: var(--ai-accent);
+  color: #0a0a0a;
+}
+
+#ask-ai-popup.dark-mode #ask-ai-send:hover {
+  background: var(--ai-accent-hover);
+}
+
+#ask-ai-popup.dark-mode #ask-ai-settings:hover,
+#ask-ai-popup.dark-mode #ask-ai-close:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--ai-text-primary);
+}
+
+#ask-ai-popup.dark-mode #ask-ai-clear {
+  border-color: rgba(255, 255, 255, 0.10);
+  color: var(--ai-text-muted);
+}
+
+#ask-ai-popup.dark-mode #ask-ai-clear:hover {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.30);
+  color: #f87171;
+}
+
+#ask-ai-popup.dark-mode .ai-msg:hover {
+  background: rgba(40, 40, 46, 0.95);
+}
+
+
+/* ── Markdown Prose Typography (inside .ai-msg) ───────────── */
+.ai-msg p {
+  margin: 0 0 0.55em;
+}
+.ai-msg p:last-child {
+  margin-bottom: 0;
+}
+
+.ai-msg h1, .ai-msg h2, .ai-msg h3,
+.ai-msg h4, .ai-msg h5, .ai-msg h6 {
+  margin: 0.9em 0 0.35em;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ai-text-primary);
+}
+.ai-msg h1 { font-size: 1.15em; }
+.ai-msg h2 { font-size: 1.08em; }
+.ai-msg h3 { font-size: 1.00em; }
+
+.ai-msg ul,
+.ai-msg ol {
+  margin: 0.4em 0 0.55em 1.25em;
+  padding: 0;
+}
+.ai-msg li {
+  margin-bottom: 0.25em;
+}
+
+.ai-msg blockquote {
+  margin: 0.5em 0;
+  padding: 0.4em 0.75em;
+  border-left: 3px solid rgba(0, 0, 0, 0.15);
+  color: var(--ai-text-secondary);
+  font-style: italic;
+}
+
+.ai-msg a {
+  color: #0066cc;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.ai-msg strong { font-weight: 600; }
+.ai-msg em     { font-style: italic; }
+
+.ai-msg hr {
+  border: none;
+  border-top: 1px solid var(--ai-border);
+  margin: 0.75em 0;
+}
+
+/* Inline code */
+.ai-msg :not(pre) > code {
+  font-family: "SF Mono", "Fira Code", "Cascadia Code", Menlo, Consolas, monospace;
+  font-size: 0.82em;
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.06);
+  color: #c7254e;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+
+/* ── Code Block Container ─────────────────────────────────── */
+.ai-code-block {
+  margin: 0.6em 0;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.09);
+  background: #f6f8fa; /* GitHub-style code bg */
+  font-size: 0; /* collapse whitespace between children */
+}
+
+/* Header bar: language label + copy button */
+.ai-code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  background: rgba(0, 0, 0, 0.04);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+}
+
+.ai-code-lang {
+  font-family: var(--ai-font);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ai-text-muted);
+}
+
+.ai-copy-code-btn {
+  font-family: var(--ai-font);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ai-text-secondary);
+  background: transparent;
+  border: 1px solid var(--ai-border);
+  border-radius: 6px;
+  padding: 3px 9px;
+  cursor: pointer;
+  transition: background var(--ai-duration) ease,
+              color var(--ai-duration) ease,
+              border-color var(--ai-duration) ease;
+}
+
+.ai-copy-code-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.14);
+  color: var(--ai-text-primary);
+}
+
+.ai-copy-code-btn.copied {
+  color: #16a34a;
+  border-color: rgba(22, 163, 74, 0.3);
+  background: rgba(22, 163, 74, 0.07);
+}
+
+/* Override highlight.js <pre> default padding so it respects the container */
+.ai-code-block pre {
+  margin: 0;
+  border-radius: 0;
+  background: transparent !important;
+}
+
+.ai-code-block pre code.hljs {
+  font-family: "SF Mono", "Fira Code", "Cascadia Code", Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.65;
+  display: block;
+  overflow-x: auto;
+  padding: 12px 14px;
+  background: transparent !important;
+
+  /* Reset font-size:0 on parent */
+  font-size: 12.5px;
+}
+
+
+/* ── Loading Indicator (animated dots) ────────────────────── */
+.ai-loading {
+  display: flex !important;
+  align-items: center;
+  gap: 5px;
+  padding: 12px 14px !important;
+  background: var(--ai-msg-ai-bg) !important;
+}
+
+.ai-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ai-text-muted);
+  animation: ai-bounce 1.2s ease-in-out infinite;
+}
+
+.ai-dot:nth-child(2) { animation-delay: 0.2s; }
+.ai-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes ai-bounce {
+  0%, 80%, 100% { transform: translateY(0);    opacity: 0.4; }
+  40%            { transform: translateY(-5px); opacity: 1;   }
+}
+
+
+/* ── Dark Mode overrides for Markdown / Code ──────────────── */
+#ask-ai-popup.dark-mode .ai-msg :not(pre) > code {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #f28b82;
+}
+
+#ask-ai-popup.dark-mode .ai-msg blockquote {
+  border-left-color: rgba(255, 255, 255, 0.18);
+  color: var(--ai-text-secondary);
+}
+
+#ask-ai-popup.dark-mode .ai-msg a {
+  color: #60a5fa;
+}
+
+#ask-ai-popup.dark-mode .ai-code-block {
+  background: #1e1e24;
+  border-color: rgba(255, 255, 255, 0.07);
+}
+
+#ask-ai-popup.dark-mode .ai-code-header {
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+#ask-ai-popup.dark-mode .ai-copy-code-btn {
+  color: var(--ai-text-secondary);
+  border-color: rgba(255, 255, 255, 0.10);
+}
+
+#ask-ai-popup.dark-mode .ai-copy-code-btn:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.16);
+  color: var(--ai-text-primary);
+}
+
+/* Force hljs GitHub theme to work on dark background */
+#ask-ai-popup.dark-mode .ai-code-block pre code.hljs {
+  background: transparent !important;
+  color: #c9d1d9; /* GitHub Dark text colour */
+}
