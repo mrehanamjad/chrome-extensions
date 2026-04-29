@@ -43,6 +43,38 @@ renderer.code = function (code, language) {
 
 marked.use({ renderer });
 
+// ── Page Meta-Context ────────────────────────────────────────
+/**
+ * Extracts lightweight page-level context so the AI knows
+ * which page it is assisting on.
+ * @returns {{ title: string, description: string }}
+ */
+function getPageContext() {
+  const title = document.title || '';
+  const metaDesc = document.querySelector('meta[name="description"]');
+  const description = metaDesc ? (metaDesc.getAttribute('content') || '') : '';
+  return { title, description };
+}
+
+// ── Session History (sliding window) ─────────────────────────
+// Holds the last N messages for the current popup session so
+// the AI can maintain conversational context.
+// Format: [{ role: 'user'|'assistant', content: string }, ...]
+const SESSION_WINDOW = 4; // keep last 4 messages (2 turns)
+let sessionHistory = [];
+
+/**
+ * Push a message into sessionHistory and trim to the window size.
+ * @param {'user'|'assistant'} role
+ * @param {string} content
+ */
+function pushSession(role, content) {
+  sessionHistory.push({ role, content });
+  if (sessionHistory.length > SESSION_WINDOW) {
+    sessionHistory.splice(0, sessionHistory.length - SESSION_WINDOW);
+  }
+}
+
 // ── 1. Inject UI Elements ────────────────────────────────────
 const fab = document.createElement('button');
 fab.id = 'ask-ai-fab';
@@ -56,6 +88,7 @@ popup.innerHTML = `
     <span>Ask AI Assistant</span>
     <div class="header-actions">
       <button id="ask-ai-clear" title="Clear chat history">Clear</button>
+      <button id="btn-dark">🌓</button>
       <span id="ask-ai-settings" title="Settings">⚙️</span>
       <span id="ask-ai-close" title="Close">&times;</span>
     </div>
@@ -65,7 +98,6 @@ popup.innerHTML = `
     <div class="ai-quick-actions">
       <button id="btn-summarize">Summarize</button>
       <button id="btn-eli5">Explain Simply</button>
-      <button id="btn-dark">🌓</button>
     </div>
     <div id="ask-ai-input-wrapper">
       <input type="text" id="ask-ai-input" placeholder="Ask a question..." />
@@ -199,23 +231,36 @@ async function handleSend(promptOverride = null) {
   inputField.value = '';
   appendMessage('user', userText || 'Analyze selection');
 
+  // Push the user turn into the sliding window BEFORE sending
+  pushSession('user', userText || 'Analyze selection');
+
   const loadingDiv = document.createElement('div');
   loadingDiv.className = 'ai-msg ai-loading';
   loadingDiv.innerHTML = '<span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span>';
   chatArea.appendChild(loadingDiv);
   chatArea.scrollTop = chatArea.scrollHeight;
 
-  chrome.runtime.sendMessage(
-    { action: 'askAI', context: currentSelection, prompt: userText },
-    (response) => {
-      loadingDiv.remove();
-      if (response.error) {
-        appendMessage('ai', `**Error:** ${response.error}`);
-      } else {
-        appendMessage('ai', response.reply);
-      }
+  // Build the enriched payload
+  const payload = {
+    action:      'askAI',
+    prompt:      userText,
+    context:     currentSelection,
+    pageContext: getPageContext(),
+    // Send a copy of the window EXCLUDING the message we just added
+    // so background.js can prepend it as prior conversation
+    chatHistory: sessionHistory.slice(0, -1),
+  };
+
+  chrome.runtime.sendMessage(payload, (response) => {
+    loadingDiv.remove();
+    if (response.error) {
+      appendMessage('ai', `**Error:** ${response.error}`);
+    } else {
+      // Push the AI reply into the sliding window
+      pushSession('assistant', response.reply);
+      appendMessage('ai', response.reply);
     }
-  );
+  });
 }
 
 // ── 5. Event Listeners ───────────────────────────────────────
@@ -255,9 +300,23 @@ document.getElementById('btn-summarize').addEventListener('click', () =>
 document.getElementById('btn-eli5').addEventListener('click', () =>
   handleSend('Explain the highlighted text in simple, everyday language.')
 );
-document.getElementById('btn-dark').addEventListener('click', () =>
-  popup.classList.toggle('dark-mode')
-);
+
+
+// 1. Load the saved theme when the script runs
+chrome.storage.local.get(['theme'], (result) => {
+  if (result.theme === 'dark') {
+    popup.classList.add('dark-mode');
+  }
+});
+
+// 2. Update the button to save the theme when clicked
+document.getElementById('btn-dark').addEventListener('click', () => {
+  // Toggle the class and check if it's currently active
+  const isDark = popup.classList.toggle('dark-mode');
+  
+  // Save the new state to storage
+  chrome.storage.local.set({ theme: isDark ? 'dark' : 'light' });
+});
 
 document.getElementById('ask-ai-settings').addEventListener('click', () => {
   chrome.runtime.sendMessage({ action: 'openSettings' });

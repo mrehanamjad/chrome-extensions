@@ -1,40 +1,38 @@
 /* ============================================================
-   AI Assistant Chrome Extension — Content UI Stylesheet
-   Design Language: Premium Minimalist / Ultra-Glassmorphism
-   Inspired by: Notion, Linear, Vercel, Apple VisionOS
+   this is extra css file for less transparent premium UI 
    ============================================================ */
 
 /* ── Design Tokens ────────────────────────────────────────── */
 :root {
   --ai-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
-  /* Glassmorphism Palette - High Blur, Low Opacity */
-  --ai-bg:          rgba(255, 255, 255, 0.45); /* Pushed transparency for glass */
-  --ai-bg-surface:  rgba(255, 255, 255, 0.50);
-  --ai-bg-chat:     rgba(255, 255, 255, 0.15); /* Almost transparent chat area */
-  --ai-border:      rgba(255, 255, 255, 0.60); /* Brighter border for glass edge */
-  --ai-border-soft: rgba(0, 0, 0, 0.06);
+  /* Monochromatic palette */
+  --ai-bg:          rgba(255, 255, 255, 0.60);
+  --ai-bg-surface:  rgba(252, 252, 254, 0.70);
+  --ai-bg-chat:     rgba(248, 248, 252, 0.45);
+  --ai-border:      rgba(0, 0, 0, 0.07);
+  --ai-border-soft: rgba(0, 0, 0, 0.04);
 
   --ai-text-primary:   #0a0a0a;
-  --ai-text-secondary: #4b5563;
+  --ai-text-secondary: #6b7280;
   --ai-text-muted:     #9ca3af;
 
-  --ai-accent:         rgba(10, 10, 10, 0.85);
-  --ai-accent-hover:   rgba(10, 10, 10, 1);
+  --ai-accent:         #0a0a0a;
+  --ai-accent-hover:   #1f1f1f;
 
-  /* Glassy Chat Bubbles */
-  --ai-msg-ai-bg:      rgba(255, 255, 255, 0.65);
-  --ai-msg-user-bg:    rgba(10, 10, 10, 0.88);
+  --ai-msg-ai-bg:      rgba(255, 255, 255, 0.55);
+  --ai-msg-user-bg:    #0a0a0a;
   --ai-msg-user-text:  #ffffff;
 
-  /* Shadows — Added inset edge lighting for the "glass rim" reflection */
-  --ai-shadow-popup:   0 12px 48px rgba(0, 0, 0, 0.12),
-                       0 4px 16px rgba(0, 0, 0, 0.08),
-                       inset 0 1px 1px rgba(255, 255, 255, 0.9); 
-  --ai-shadow-fab:     0 4px 16px rgba(0, 0, 0, 0.15),
-                       inset 0 1px 1px rgba(255, 255, 255, 0.2);
-  --ai-shadow-btn:     0 1px 3px rgba(0, 0, 0, 0.06),
-                       inset 0 1px 0px rgba(255, 255, 255, 0.8);
+  /* Shadows — soft and diffuse */
+  --ai-shadow-popup:   0 32px 72px rgba(0, 0, 0, 0.18),
+                       0 12px 28px rgba(0, 0, 0, 0.10),
+                       0 4px 10px  rgba(0, 0, 0, 0.06),
+                       inset 0 1px 0 rgba(255, 255, 255, 0.70),
+                       inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+  --ai-shadow-fab:     0 4px 16px rgba(0, 0, 0, 0.18),
+                       0 1px 4px rgba(0, 0, 0, 0.10);
+  --ai-shadow-btn:     0 1px 3px rgba(0, 0, 0, 0.08);
 
   /* Motion */
   --ai-ease: cubic-bezier(0.16, 1, 0.3, 1);
@@ -51,12 +49,12 @@
   align-items: center;
   gap: 5px;
 
-  background: rgba(10, 10, 10, 0.65);
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  background: rgba(10, 10, 10, 0.88);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
 
   color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
   padding: 6px 12px;
 
@@ -77,9 +75,9 @@
 }
 
 #ask-ai-fab:hover {
-  background: rgba(20, 20, 20, 0.85);
+  background: rgba(30, 30, 30, 0.95);
   transform: translateY(-1px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22), 0 2px 6px rgba(0, 0, 0, 0.12);
 }
 
 #ask-ai-fab:active {
@@ -106,13 +104,15 @@
   display: none;
   flex-direction: column;
 
-  /* Ultra Glassmorphism */
+  /* Glassmorphism — frosted glass core */
   background: var(--ai-bg);
-  backdrop-filter: blur(32px) saturate(200%);
-  -webkit-backdrop-filter: blur(32px) saturate(200%);
+  backdrop-filter: blur(48px) saturate(220%) brightness(1.04);
+  -webkit-backdrop-filter: blur(48px) saturate(220%) brightness(1.04);
 
-  border: 1px solid var(--ai-border);
-  border-radius: 16px;
+  /* Glass-edge border: top highlight fades into transparent sides */
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-bottom-color: rgba(200, 200, 220, 0.25);
+  border-radius: 18px;
   box-shadow: var(--ai-shadow-popup);
 
   font-family: var(--ai-font);
@@ -139,8 +139,8 @@
   justify-content: space-between;
   padding: 14px 16px 13px;
 
-  background: transparent;
-  border-bottom: 1px solid var(--ai-border-soft);
+  background: rgba(255, 255, 255, 0.30);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.35);
 
   cursor: grab;
   user-select: none;
@@ -165,9 +165,10 @@
 }
 
 
-/* ── Header Icon Buttons (Settings & Close) ───────────────── */
+/* ── Header Icon Buttons (Settings, Dark toggle & Close) ─── */
 #ask-ai-settings,
-#ask-ai-close {
+#ask-ai-close,
+#btn-dark {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -186,7 +187,8 @@
 }
 
 #ask-ai-settings:hover,
-#ask-ai-close:hover {
+#ask-ai-close:hover,
+#btn-dark:hover {
   background: rgba(0, 0, 0, 0.06);
   color: var(--ai-text-primary);
 }
@@ -205,7 +207,7 @@
   color: var(--ai-text-muted);
 
   background: transparent;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--ai-border);
   border-radius: 20px;
   padding: 3px 9px;
   height: 22px;
@@ -274,16 +276,13 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* AI message - secondary glass layer */
+/* AI message */
 .ai-msg {
   align-self: flex-start;
   background: var(--ai-msg-ai-bg);
-  backdrop-filter: blur(8px); /* Blur inside the blur */
-  -webkit-backdrop-filter: blur(8px);
   color: var(--ai-text-primary);
   border: 1px solid var(--ai-border-soft);
   border-bottom-left-radius: 4px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6); /* Inner highlight */
 
   /* Copy affordance */
   cursor: pointer;
@@ -291,7 +290,7 @@
 }
 
 .ai-msg:hover {
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(235, 235, 238, 0.95);
 }
 
 /* User message */
@@ -300,15 +299,14 @@
   background: var(--ai-msg-user-bg);
   color: var(--ai-msg-user-text);
   border-bottom-right-radius: 4px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 
 /* ── Controls Panel ───────────────────────────────────────── */
 #ask-ai-controls {
   padding: 12px 14px 14px;
-  border-top: 1px solid var(--ai-border-soft);
-  background: transparent;
+  border-top: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.22);
   display: flex;
   flex-direction: column;
   gap: 9px;
@@ -331,10 +329,11 @@
   color: var(--ai-text-secondary);
 
   padding: 5px 10px;
-  border: 1px solid var(--ai-border-soft);
+  border: 1px solid var(--ai-border);
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(4px);
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 
   cursor: pointer;
   white-space: nowrap;
@@ -348,16 +347,18 @@
 }
 
 .ai-quick-actions button:hover {
-  background: rgba(255, 255, 255, 0.9);
-  border-color: rgba(0, 0, 0, 0.1);
+  background: rgba(10, 10, 10, 0.06);
+  border-color: rgba(0, 0, 0, 0.14);
   color: var(--ai-text-primary);
   transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08), inset 0 1px 0px rgba(255, 255, 255, 1);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.10);
 }
 
 .ai-quick-actions button:active {
   transform: translateY(0);
 }
+
+/* Dark-mode toggle chip inherits same styles above */
 
 
 /* ── Input Row ────────────────────────────────────────────── */
@@ -370,10 +371,11 @@
 #ask-ai-input {
   flex: 1;
   padding: 9px 12px;
-  border: 1px solid var(--ai-border-soft);
+  border: 1px solid var(--ai-border);
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(4px);
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 
   font-family: var(--ai-font);
   font-size: 13px;
@@ -381,10 +383,9 @@
   line-height: 1.4;
 
   outline: none;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.04);
   transition: border-color var(--ai-duration) ease,
-              box-shadow var(--ai-duration) ease,
-              background var(--ai-duration) ease;
+              box-shadow var(--ai-duration) ease;
 }
 
 #ask-ai-input::placeholder {
@@ -392,10 +393,9 @@
 }
 
 #ask-ai-input:focus {
-  background: rgba(255, 255, 255, 0.9);
-  border-color: rgba(0, 0, 0, 0.15);
+  border-color: rgba(0, 0, 0, 0.24);
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.04),
-              0 0 0 3px rgba(0, 0, 0, 0.04);
+              0 0 0 3px rgba(0, 0, 0, 0.06);
 }
 
 #ask-ai-send {
@@ -412,7 +412,7 @@
   letter-spacing: 0.01em;
   cursor: pointer;
 
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.20);
   transition: background var(--ai-duration) ease,
               transform var(--ai-duration) var(--ai-ease),
               box-shadow var(--ai-duration) ease;
@@ -421,7 +421,7 @@
 #ask-ai-send:hover {
   background: var(--ai-accent-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
 }
 
 #ask-ai-send:active {
@@ -430,44 +430,52 @@
 }
 
 
-/* ── Dark Mode - Smoky Glass ──────────────────────────────── */
+/* ── Dark Mode ────────────────────────────────────────────── */
 #ask-ai-popup.dark-mode {
-  --ai-bg:          rgba(20, 20, 25, 0.45); /* Deep smoky transparency */
-  --ai-bg-surface:  rgba(30, 30, 35, 0.50);
-  --ai-bg-chat:     rgba(0, 0, 0, 0.15);
-  --ai-border:      rgba(255, 255, 255, 0.12); /* Subtle light edge */
-  --ai-border-soft: rgba(255, 255, 255, 0.06);
+  --ai-bg:          rgba(14, 14, 18, 0.72);
+  --ai-bg-surface:  rgba(20, 20, 26, 0.75);
+  --ai-bg-chat:     rgba(10, 10, 14, 0.55);
+  --ai-border:      rgba(255, 255, 255, 0.10);
+  --ai-border-soft: rgba(255, 255, 255, 0.07);
 
   --ai-text-primary:   #f2f2f5;
-  --ai-text-secondary: #a1a1aa;
-  --ai-text-muted:     #71717a;
+  --ai-text-secondary: #8b8b9a;
+  --ai-text-muted:     #5c5c70;
 
   --ai-accent:       #e8e8ec;
   --ai-accent-hover: #ffffff;
 
-  --ai-msg-ai-bg:    rgba(40, 40, 45, 0.55);
-  --ai-msg-user-bg:  rgba(230, 230, 235, 0.90);
+  --ai-msg-ai-bg:    rgba(255, 255, 255, 0.08);
+  --ai-msg-user-bg:  #e8e8ec;
   --ai-msg-user-text: #0a0a0a;
-  
-  --ai-shadow-popup: 0 12px 48px rgba(0, 0, 0, 0.5),
-                     0 4px 16px rgba(0, 0, 0, 0.3),
-                     inset 0 1px 1px rgba(255, 255, 255, 0.08); /* Dark glass reflection */
 
   background: var(--ai-bg);
+  backdrop-filter: blur(48px) saturate(180%) brightness(0.90);
+  -webkit-backdrop-filter: blur(48px) saturate(180%) brightness(0.90);
   color: var(--ai-text-primary);
-  border-color: var(--ai-border);
+  border-color: rgba(255, 255, 255, 0.14);
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 32px 72px rgba(0, 0, 0, 0.50),
+              0 12px 28px rgba(0, 0, 0, 0.35),
+              0 4px 10px  rgba(0, 0, 0, 0.20),
+              inset 0 1px 0 rgba(255, 255, 255, 0.12),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+#ask-ai-popup.dark-mode #ask-ai-header {
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+#ask-ai-popup.dark-mode #ask-ai-controls {
+  background: rgba(255, 255, 255, 0.03);
+  border-top-color: rgba(255, 255, 255, 0.08);
 }
 
 #ask-ai-popup.dark-mode #ask-ai-input {
-  background: rgba(30, 30, 35, 0.50);
+  background: rgba(255, 255, 255, 0.06);
   color: var(--ai-text-primary);
-  border-color: var(--ai-border-soft);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-#ask-ai-popup.dark-mode #ask-ai-input:focus {
-  background: rgba(40, 40, 45, 0.8);
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: var(--ai-border);
 }
 
 #ask-ai-popup.dark-mode #ask-ai-input::placeholder {
@@ -475,16 +483,14 @@
 }
 
 #ask-ai-popup.dark-mode .ai-quick-actions button {
-  background: rgba(40, 40, 45, 0.5);
+  background: rgba(255, 255, 255, 0.06);
   color: var(--ai-text-secondary);
-  border-color: var(--ai-border-soft);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), inset 0 1px 0px rgba(255, 255, 255, 0.05);
+  border-color: var(--ai-border);
 }
 
 #ask-ai-popup.dark-mode .ai-quick-actions button:hover {
-  background: rgba(60, 60, 68, 0.80);
+  background: rgba(255, 255, 255, 0.11);
   color: var(--ai-text-primary);
-  border-color: rgba(255, 255, 255, 0.15);
 }
 
 #ask-ai-popup.dark-mode #ask-ai-send {
@@ -497,28 +503,25 @@
 }
 
 #ask-ai-popup.dark-mode #ask-ai-settings:hover,
-#ask-ai-popup.dark-mode #ask-ai-close:hover {
-  background: rgba(255, 255, 255, 0.1);
+#ask-ai-popup.dark-mode #ask-ai-close:hover,
+#ask-ai-popup.dark-mode #btn-dark:hover {
+  background: rgba(255, 255, 255, 0.07);
   color: var(--ai-text-primary);
 }
 
 #ask-ai-popup.dark-mode #ask-ai-clear {
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.10);
   color: var(--ai-text-muted);
 }
 
 #ask-ai-popup.dark-mode #ask-ai-clear:hover {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.40);
-  color: #fca5a5;
-}
-
-#ask-ai-popup.dark-mode .ai-msg {
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.30);
+  color: #f87171;
 }
 
 #ask-ai-popup.dark-mode .ai-msg:hover {
-  background: rgba(60, 60, 68, 0.7);
+  background: rgba(40, 40, 46, 0.95);
 }
 
 
@@ -569,7 +572,7 @@
 
 .ai-msg hr {
   border: none;
-  border-top: 1px solid var(--ai-border-soft);
+  border-top: 1px solid var(--ai-border);
   margin: 0.75em 0;
 }
 
@@ -579,9 +582,9 @@
   font-size: 0.82em;
   padding: 2px 5px;
   border-radius: 5px;
-  background: rgba(0, 0, 0, 0.08);
+  background: rgba(0, 0, 0, 0.06);
   color: #c7254e;
-  border: 1px solid rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 
@@ -590,10 +593,9 @@
   margin: 0.6em 0;
   border-radius: 10px;
   overflow: hidden;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  background: rgba(246, 248, 250, 0.8); /* Slightly transparent code bg */
-  backdrop-filter: blur(4px);
-  font-size: 0; 
+  border: 1px solid rgba(0, 0, 0, 0.09);
+  background: #f6f8fa; /* GitHub-style code bg */
+  font-size: 0; /* collapse whitespace between children */
 }
 
 /* Header bar: language label + copy button */
@@ -602,8 +604,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 7px 12px;
-  background: rgba(0, 0, 0, 0.03);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  background: rgba(0, 0, 0, 0.04);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
 }
 
 .ai-code-lang {
@@ -621,7 +623,7 @@
   font-weight: 500;
   color: var(--ai-text-secondary);
   background: transparent;
-  border: 1px solid var(--ai-border-soft);
+  border: 1px solid var(--ai-border);
   border-radius: 6px;
   padding: 3px 9px;
   cursor: pointer;
@@ -642,6 +644,7 @@
   background: rgba(22, 163, 74, 0.07);
 }
 
+/* Override highlight.js <pre> default padding so it respects the container */
 .ai-code-block pre {
   margin: 0;
   border-radius: 0;
@@ -656,6 +659,8 @@
   overflow-x: auto;
   padding: 12px 14px;
   background: transparent !important;
+
+  /* Reset font-size:0 on parent */
   font-size: 12.5px;
 }
 
@@ -689,42 +694,43 @@
 
 /* ── Dark Mode overrides for Markdown / Code ──────────────── */
 #ask-ai-popup.dark-mode .ai-msg :not(pre) > code {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.08);
-  color: #fca5a5;
+  color: #f28b82;
 }
 
 #ask-ai-popup.dark-mode .ai-msg blockquote {
-  border-left-color: rgba(255, 255, 255, 0.25);
+  border-left-color: rgba(255, 255, 255, 0.18);
   color: var(--ai-text-secondary);
 }
 
 #ask-ai-popup.dark-mode .ai-msg a {
-  color: #93c5fd;
+  color: #60a5fa;
 }
 
 #ask-ai-popup.dark-mode .ai-code-block {
-  background: rgba(20, 20, 25, 0.6); /* Smoky dark code bg */
-  border-color: rgba(255, 255, 255, 0.1);
+  background: #1e1e24;
+  border-color: rgba(255, 255, 255, 0.07);
 }
 
 #ask-ai-popup.dark-mode .ai-code-header {
   background: rgba(255, 255, 255, 0.03);
-  border-bottom-color: rgba(255, 255, 255, 0.08);
+  border-bottom-color: rgba(255, 255, 255, 0.06);
 }
 
 #ask-ai-popup.dark-mode .ai-copy-code-btn {
   color: var(--ai-text-secondary);
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.10);
 }
 
 #ask-ai-popup.dark-mode .ai-copy-code-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.16);
   color: var(--ai-text-primary);
 }
 
+/* Force hljs GitHub theme to work on dark background */
 #ask-ai-popup.dark-mode .ai-code-block pre code.hljs {
   background: transparent !important;
-  color: #e2e8f0; 
+  color: #c9d1d9; /* GitHub Dark text colour */
 }
