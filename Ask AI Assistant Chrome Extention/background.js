@@ -110,6 +110,7 @@ async function fetchOllama(messages, model) {
     body:    JSON.stringify({ model, prompt, stream: false }),
   });
   if (!res.ok) throw new Error('Failed to connect to local Ollama.');
+  console.log(res);
   const data = await res.json();
   return data.response;
 }

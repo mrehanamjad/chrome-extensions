@@ -76,10 +76,20 @@ function pushSession(role, content) {
 }
 
 // ── 1. Inject UI Elements ────────────────────────────────────
-const fab = document.createElement('button');
-fab.id = 'ask-ai-fab';
-fab.textContent = '✨ Ask AI';
-document.body.appendChild(fab);
+// Floating inline toolbar (replaces the single FAB button)
+const toolbar = document.createElement('div');
+toolbar.id = 'ask-ai-floating-toolbar';
+toolbar.innerHTML = `
+  <button id="ask-ai-fab" class="ai-toolbar-primary">✨ Ask AI</button>
+  <span class="ai-toolbar-divider"></span>
+  <button class="ai-toolbar-action" data-prompt="Please explain the highlighted text in simple, everyday language.">Explain</button>
+  <button class="ai-toolbar-action" data-prompt="Please summarize the highlighted text concisely.">Summarize</button>
+  <button class="ai-toolbar-action" data-prompt="Please fix any grammar or spelling mistakes in this text and improve the flow.">Fix Grammar</button>
+`;
+document.body.appendChild(toolbar);
+
+// Keep a reference to the primary button for compatibility
+const fab = document.getElementById('ask-ai-fab');
 
 const popup = document.createElement('div');
 popup.id = 'ask-ai-popup';
@@ -98,6 +108,7 @@ popup.innerHTML = `
     <div class="ai-quick-actions">
       <button id="btn-summarize">Summarize</button>
       <button id="btn-eli5">Explain Simply</button>
+      <button id="btn-fix-grammar">Fix Grammar</button>
     </div>
     <div id="ask-ai-input-wrapper">
       <input type="text" id="ask-ai-input" placeholder="Ask a question..." />
@@ -145,22 +156,23 @@ function clearHistory() {
 
 // ── 3. Text Selection Detection ──────────────────────────────
 document.addEventListener('mouseup', (e) => {
-  if (popup.contains(e.target) || e.target === fab) return;
+  if (popup.contains(e.target) || toolbar.contains(e.target)) return;
 
   const selection = window.getSelection().toString().trim();
   if (selection.length > 0) {
     currentSelection = selection;
-    fab.style.display = 'block';
-    fab.style.top  = `${e.pageY + 10}px`;
-    fab.style.left = `${e.pageX + 10}px`;
+    toolbar.style.display = 'flex';
+    // Position toolbar just below and to the right of the cursor
+    toolbar.style.top  = `${e.pageY + 12}px`;
+    toolbar.style.left = `${e.pageX + 8}px`;
   } else {
-    fab.style.display = 'none';
+    toolbar.style.display = 'none';
   }
 });
 
 document.addEventListener('mousedown', (e) => {
-  if (e.target !== fab && !popup.contains(e.target)) {
-    fab.style.display = 'none';
+  if (!toolbar.contains(e.target) && !popup.contains(e.target)) {
+    toolbar.style.display = 'none';
   }
 });
 
@@ -265,29 +277,52 @@ async function handleSend(promptOverride = null) {
 
 // ── 5. Event Listeners ───────────────────────────────────────
 
-// FAB: open popup and load history (only on first open)
 let historyLoaded = false;
 
-fab.addEventListener('click', () => {
-  fab.style.display = 'none';
+/**
+ * Shared helper: hide toolbar, show popup, load history on
+ * first open, then run an optional callback once ready.
+ */
+function triggerPopupAction(promptToAutoSend = null) {
+  toolbar.style.display = 'none';
   popup.style.display = 'flex';
+
+  const proceed = () => {
+    // 1. Print the context block to the UI
+    if (currentSelection) {
+      appendMessage('ai', `**Context captured:**\n\n> ${currentSelection.substring(0, 120)}${currentSelection.length > 120 ? '…' : ''}`);
+    }
+    
+    // 2. Auto-send the user's prompt if a quick-action was clicked
+    if (promptToAutoSend) {
+      handleSend(promptToAutoSend);
+    }
+  };
 
   if (!historyLoaded) {
     historyLoaded = true;
-    loadHistory(() => {
-      // After restoring history, add any fresh selection context
-      if (currentSelection) {
-        appendMessage('ai', `**Context captured:**\n\n> ${currentSelection.substring(0, 120)}${currentSelection.length > 120 ? '…' : ''}`);
-      }
-    });
-  } else if (currentSelection) {
-    appendMessage('ai', `**Context captured:**\n\n> ${currentSelection.substring(0, 120)}${currentSelection.length > 120 ? '…' : ''}`);
+    loadHistory(proceed);
+  } else {
+    proceed();
   }
+}
+
+// Primary "✨ Ask AI" button — open popup, print context, wait for user input
+fab.addEventListener('click', () => {
+  triggerPopupAction();
+});
+
+// Quick-action toolbar buttons — open popup, print context, and auto-send prompt
+toolbar.querySelectorAll('.ai-toolbar-action').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    triggerPopupAction(btn.dataset.prompt);
+  });
 });
 
 document.getElementById('ask-ai-close').addEventListener('click', () => {
   popup.style.display = 'none';
 });
+
 
 document.getElementById('ask-ai-send').addEventListener('click', () => handleSend());
 inputField.addEventListener('keypress', (e) => {
@@ -299,6 +334,9 @@ document.getElementById('btn-summarize').addEventListener('click', () =>
 );
 document.getElementById('btn-eli5').addEventListener('click', () =>
   handleSend('Explain the highlighted text in simple, everyday language.')
+);
+document.getElementById('btn-fix-grammar').addEventListener('click', () =>
+  handleSend('Please fix any grammar or spelling mistakes in this text and improve the flow.')
 );
 
 
@@ -335,7 +373,7 @@ let isDragging = false, startX, startY, initialX, initialY;
 
 header.addEventListener('mousedown', (e) => {
   // Don't drag if user clicked any interactive header element
-  if (e.target.closest('#ask-ai-clear, #ask-ai-close, #ask-ai-settings')) return;
+  if (e.target.closest('#ask-ai-clear, #ask-ai-close, #ask-ai-settings, #btn-dark')) return;
   isDragging = true;
   startX = e.clientX; startY = e.clientY;
   initialX = popup.offsetLeft; initialY = popup.offsetTop;
