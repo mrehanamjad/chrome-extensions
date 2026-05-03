@@ -86,7 +86,4 @@ Set the environment variable before starting the Ollama application or CLI.
 
 ### Author
 Designed and engineered by **M. Rehan Amjad**
-
-### License
-MIT License
 ```
