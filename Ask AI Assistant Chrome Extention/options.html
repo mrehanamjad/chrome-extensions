@@ -1,38 +1,349 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Ask AI Settings</title>
+  <meta charset="UTF-8">
+  <title>Ask AI — Settings</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    body { font-family: -apple-system, system-ui, sans-serif; padding: 20px; max-width: 400px; margin: 0 auto; background: #f9f9f9; }
-    .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    label { display: block; margin-top: 15px; font-weight: bold; font-size: 14px; }
-    input, select { width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-    button { margin-top: 20px; width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;}
-    button:hover { background: #0056b3; }
-    #status { margin-top: 10px; color: green; display: none; text-align: center; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f4f4f6;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 32px 16px 48px;
+      color: #0a0a0a;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
+      padding: 28px 28px 24px;
+      width: 100%;
+      max-width: 420px; /* slightly widened to accommodate the guide text cleanly */
+    }
+
+    .card-header {
+      margin-bottom: 24px;
+    }
+
+    .card-header h1 {
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: #0a0a0a;
+    }
+
+    .card-header p {
+      margin-top: 4px;
+      font-size: 12.5px;
+      color: #9ca3af;
+      line-height: 1.5;
+    }
+
+    /* ── Field groups ── */
+    .field {
+      margin-bottom: 16px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: #6b7280;
+      margin-bottom: 6px;
+    }
+
+    input[type="text"],
+    input[type="password"],
+    select {
+      width: 100%;
+      padding: 9px 12px;
+      font-family: inherit;
+      font-size: 13.5px;
+      color: #0a0a0a;
+      background: #fafafa;
+      border: 1px solid #e5e7eb;
+      border-radius: 9px;
+      outline: none;
+      transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    /* Custom chevron for <select> */
+    .select-wrapper {
+      position: relative;
+    }
+    .select-wrapper::after {
+      content: "▾";
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      color: #9ca3af;
+      font-size: 12px;
+    }
+    .select-wrapper select {
+      padding-right: 30px;
+    }
+
+    input:focus,
+    select:focus {
+      border-color: #a3a3a3;
+      background: #ffffff;
+      box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
+    }
+
+    input::placeholder { color: #c4c4c8; }
+
+    /* ── Model section ── */
+    #model-section { position: relative; }
+    #model-text { display: none; }
+    #model-custom-wrapper { margin-top: 8px; display: none; }
+    #model-custom-wrapper input { font-size: 13px; }
+
+    .custom-hint {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-top: 5px;
+    }
+
+    /* ── API key field ── */
+    #apikey-field {
+      overflow: hidden;
+      max-height: 0;
+      opacity: 0;
+      transition: max-height 260ms ease, opacity 220ms ease, margin-bottom 220ms ease;
+      margin-bottom: 0;
+    }
+
+    #apikey-field.visible {
+      max-height: 80px;
+      opacity: 1;
+      margin-bottom: 16px;
+    }
+
+    /* ── Divider ── */
+    .divider {
+      border: none;
+      border-top: 1px solid #f0f0f0;
+      margin: 20px 0;
+    }
+
+    /* ── Save button ── */
+    #saveBtn {
+      width: 100%;
+      padding: 11px;
+      background: #0a0a0a;
+      color: #ffffff;
+      border: none;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 13.5px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.14);
+      transition: background 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+    }
+
+    #saveBtn:hover {
+      background: #1f1f1f;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+    }
+
+    #saveBtn:active {
+      transform: translateY(0);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+    }
+
+    /* ── Status toast ── */
+    #status {
+      display: none;
+      margin-top: 12px;
+      padding: 8px 14px;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      color: #16a34a;
+      font-size: 12.5px;
+      font-weight: 500;
+      text-align: center;
+      animation: fade-in 200ms ease both;
+    }
+
+    @keyframes fade-in {
+      from { opacity: 0; transform: translateY(4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Troubleshooting Guide (Accordion) ── */
+    .help-section {
+      margin-top: 24px;
+    }
+
+    details {
+      background: #fafafa;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      overflow: hidden;
+      transition: background 180ms ease;
+    }
+
+    details:hover {
+      background: #f4f4f5;
+    }
+
+    summary {
+      font-size: 12.5px;
+      font-weight: 500;
+      color: #374151;
+      padding: 12px 16px;
+      cursor: pointer;
+      list-style: none; /* Hide default arrow */
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    summary::-webkit-details-marker { display: none; } /* Hide arrow in Safari */
+    
+    summary::after {
+      content: "+";
+      font-size: 16px;
+      color: #9ca3af;
+      transition: transform 0.2s ease;
+    }
+
+    details[open] summary::after {
+      transform: rotate(45deg); /* Turns the + into an x */
+    }
+
+    details[open] {
+      background: #ffffff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    .help-content {
+      padding: 0 16px 16px 16px;
+      color: #4b5563;
+    }
+
+    .help-content h4 {
+      font-size: 12px;
+      color: #111827;
+      margin: 12px 0 6px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .help-content p, .help-content li {
+      font-size: 12px;
+      line-height: 1.6;
+      margin-bottom: 6px;
+    }
+
+    .help-content ul {
+      padding-left: 18px;
+    }
+
+    .help-content code {
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      padding: 2px 5px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 11px;
+      color: #db2777; /* Subtle pink/red for code emphasis */
+    }
   </style>
 </head>
 <body>
   <div class="card">
-    <h2>AI Settings</h2>
-    
-    <label for="provider">AI Provider</label>
-    <select id="provider">
-      <option value="ollama">Local Ollama</option>
-      <option value="openai">OpenAI</option>
-      <option value="gemini">Google Gemini</option>
-      <option value="groq">Groq</option>
-    </select>
+    <div class="card-header">
+      <h1>✨ Ask AI Settings</h1>
+      <p>Configure your AI provider and model to start chatting.</p>
+    </div>
 
-    <label for="model">Model Name</label>
-    <input type="text" id="model" placeholder="e.g., llama3, gpt-4o, gemini-1.5-pro">
+    <!-- Provider -->
+    <div class="field">
+      <label for="provider">AI Provider</label>
+      <div class="select-wrapper">
+        <select id="provider">
+          <option value="ollama">Local Ollama</option>
+          <option value="openai">OpenAI</option>
+          <option value="gemini">Google Gemini</option>
+          <option value="groq">Groq</option>
+          <option value="openrouter">OpenRouter</option>
+        </select>
+      </div>
+    </div>
 
-    <label for="apiKey">API Key (Cloud only)</label>
-    <input type="password" id="apiKey" placeholder="Leave blank for Ollama">
+    <!-- Model -->
+    <div class="field" id="model-section">
+      <label for="model-text">Model</label>
+      <input type="text" id="model-text" placeholder="e.g. llama3.2:3b, qwen2.5:3b">
+      
+      <div class="select-wrapper" id="model-select-wrapper">
+        <select id="model-select"></select>
+      </div>
+
+      <div id="model-custom-wrapper">
+        <input type="text" id="model-custom" placeholder="Type exact model string…">
+        <p class="custom-hint">Enter the model identifier exactly as the provider expects it.</p>
+      </div>
+    </div>
+
+    <!-- API Key -->
+    <div class="field" id="apikey-field">
+      <label for="apiKey">API Key</label>
+      <input type="password" id="apiKey" placeholder="Paste your API key here">
+    </div>
+
+    <hr class="divider">
 
     <button id="saveBtn">Save Settings</button>
-    <div id="status">Settings saved!</div>
+    <div id="status">✓ Settings saved!</div>
+
+    <!-- Troubleshooting Guide -->
+    <div class="help-section">
+      <details>
+        <summary>Having trouble connecting?</summary>
+        <div class="help-content">
+          <h4>Ollama (Connection Refused)</h4>
+          <p>By default, Ollama blocks browser extensions. You must allow Cross-Origin Requests (CORS).</p>
+          <ul>
+            <li><strong>Linux:</strong> <br> Run <br> <code>sudo systemctl edit ollama.service</code> <br> and add <br> <code>Environment="OLLAMA_ORIGINS=*"</code> <br> under <code>[Service]</code>. <br> Restart with <br> <code>sudo systemctl restart ollama</code>.</li>
+            <li><strong>Mac/Windows:</strong> <br> Open your terminal/command prompt <br> and run <code>set OLLAMA_ORIGINS="*"</code> (Windows) <br> or <code>export OLLAMA_ORIGINS="*"</code> (Mac), <br> then start the Ollama app <br> from that same terminal.</li>
+          </ul>
+
+          <h4>Ollama (Model Not Found)</h4>
+          <p>If you get an error when chatting, ensure you have downloaded the exact model name. Open your terminal and run: <code>ollama run &lt;model-name&gt;</code>.</p>
+
+          <h4>Cloud APIs (Groq, OpenAI, Gemini)</h4>
+          <p>If the chat fails to load:</p>
+          <ul>
+            <li>Double-check that your API key is pasted correctly without extra spaces.</li>
+            <li>Ensure your API account has available credits (some free tiers expire).</li>
+            <li>If using a custom model, ensure the string exactly matches the provider's documentation.</li>
+          </ul>
+        </div>
+      </details>
+    </div>
+    
   </div>
+
   <script src="options.js"></script>
 </body>
 </html>

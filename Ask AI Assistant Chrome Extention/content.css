@@ -291,7 +291,98 @@
 }
 
 
+/* ── First-Run / Empty State ──────────────────────────────── */
+#ai-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px 24px 28px;
+  gap: 10px;
+  height: 100%;
+  box-sizing: border-box;
+  animation: ai-msg-in 260ms var(--ai-ease) both;
+}
+
+.ai-empty-icon {
+  font-size: 32px;
+  line-height: 1;
+  margin-bottom: 4px;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.12));
+}
+
+.ai-empty-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ai-text-primary);
+}
+
+.ai-empty-desc {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ai-text-muted);
+}
+
+/* Primary CTA — Configure Now */
+#ai-empty-configure-btn {
+  margin-top: 6px;
+  padding: 9px 22px;
+  background: var(--ai-accent);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+
+  font-family: var(--ai-font);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18),
+              0 1px 3px rgba(0, 0, 0, 0.12);
+
+  transition: background var(--ai-duration) ease,
+              transform var(--ai-duration) var(--ai-ease),
+              box-shadow var(--ai-duration) ease;
+}
+
+#ai-empty-configure-btn:hover {
+  background: var(--ai-accent-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.20),
+              0 2px 6px  rgba(0, 0, 0, 0.12);
+}
+
+#ai-empty-configure-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.14);
+}
+
+.ai-empty-hint {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--ai-text-muted);
+  letter-spacing: 0.01em;
+  opacity: 0.7;
+}
+
+/* Dark mode overrides */
+#ask-ai-popup.dark-mode #ai-empty-configure-btn {
+  background: var(--ai-accent);
+  color: #0a0a0a;
+}
+
+#ask-ai-popup.dark-mode #ai-empty-configure-btn:hover {
+  background: var(--ai-accent-hover);
+}
+
+
 /* ── Chat Message Area ────────────────────────────────────── */
+
 #ask-ai-chat {
   flex: 1;
   padding: 14px 14px 10px;
@@ -790,4 +881,23 @@
 #ask-ai-popup.dark-mode .ai-code-block pre code.hljs {
   background: transparent !important;
   color: #e2e8f0; 
+}
+
+
+/* ── Streaming Cursor ─────────────────────────────────────── */
+/* A blinking | caret shown inside the AI bubble while the first
+   chunk is still in transit. Removed as soon as text starts flowing. */
+.ai-stream-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: var(--ai-text-muted);
+  border-radius: 1px;
+  vertical-align: middle;
+  animation: ai-cursor-blink 0.9s step-end infinite;
+}
+
+@keyframes ai-cursor-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
 }

@@ -1,21 +1,34 @@
+// ── One-off messages (e.g. openSettings) ────────────────────
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === "openSettings") {
+  if (request.action === 'openSettings') {
     chrome.runtime.openOptionsPage();
-    sendResponse({ status: "opening" });
+    sendResponse({ status: 'opening' });
     return true;
   }
+});
 
-  if (request.action === "askAI") {
-    handleAIRequest({
-      prompt:      request.prompt,
-      context:     request.context,
-      pageContext: request.pageContext  || { title: '', description: '' },
-      chatHistory: request.chatHistory || [],
-    })
-      .then(reply => sendResponse({ reply }))
-      .catch(err  => sendResponse({ error: err.message }));
-    return true; // keep channel open for async
-  }
+// ── Long-lived port for streaming AI responses ───────────────
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name !== 'ai-stream') return;
+
+  port.onMessage.addListener(async (request) => {
+    if (request.action !== 'askAI') return;
+
+    try {
+      await handleAIRequest(
+        {
+          prompt:      request.prompt,
+          context:     request.context,
+          pageContext: request.pageContext  || { title: '', description: '' },
+          chatHistory: request.chatHistory || [],
+        },
+        port
+      );
+    } catch (err) {
+      // Only post if port is still open
+      try { port.postMessage({ error: err.message }); } catch (_) {}
+    }
+  });
 });
 
 /**
@@ -30,12 +43,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
  *   5. User question
  *
  * @param {{ prompt, context, pageContext, chatHistory }} opts
+ * @param {chrome.runtime.Port} port
  */
-async function handleAIRequest({ prompt, context, pageContext, chatHistory }) {
+async function handleAIRequest({ prompt, context, pageContext, chatHistory }, port) {
   const data = await chrome.storage.local.get(['provider', 'model', 'apiKey']);
   const provider = data.provider || 'ollama';
-  const model    = data.model    || 'qwen2.5:3b';
+  const model    = data.model    || 'llama3.2:3b';
   const apiKey   = data.apiKey;
+
+  console.debug('[AI Assistant] provider:', provider, '| model:', model);
 
   // ── Build message array ─────────────────────────────────────
   const messages = [];
@@ -60,7 +76,6 @@ async function handleAIRequest({ prompt, context, pageContext, chatHistory }) {
   // 3. Prior conversation turns (sliding window)
   if (Array.isArray(chatHistory) && chatHistory.length > 0) {
     chatHistory.forEach(({ role, content }) => {
-      // Sanitise: only allow 'user' or 'assistant' roles
       if (role === 'user' || role === 'assistant') {
         messages.push({ role, content });
       }
@@ -76,59 +91,162 @@ async function handleAIRequest({ prompt, context, pageContext, chatHistory }) {
       `"${context.trim()}"\n\n`;
   }
   userContent += `User Question: ${prompt}`;
-
   messages.push({ role: 'user', content: userContent });
 
-  // ── Dispatch ────────────────────────────────────────────────
-  if (provider === 'ollama')  return fetchOllama(messages, model);
-  if (provider === 'openai')  return fetchOpenAI(messages, model, apiKey);
-  if (provider === 'gemini')  return fetchGemini(messages, model, apiKey);
-  if (provider === 'groq')    return fetchGroq(messages, model, apiKey);
+  console.debug('[AI Assistant] final messages array:', JSON.stringify(messages, null, 2));
+
+  if (provider === 'ollama') return fetchOllama(messages, model, port);
+  if (provider === 'openai') return fetchOpenAI(messages, model, apiKey, port);
+  if (provider === 'gemini') return fetchGemini(messages, model, apiKey, port);
+  if (provider === 'groq')   return fetchGroq(messages, model, apiKey, port);
+  if (provider === 'openrouter') return fetchOpenRouter(messages, model, apiKey, port);
   throw new Error('Invalid provider selected.');
 }
 
-/**
- * Ollama — collapse the messages array into a single prompt string
- * because the /api/generate endpoint is single-turn.
- * Use /api/chat for multi-turn if your Ollama version supports it.
- */
-async function fetchOllama(messages, model) {
-  // Flatten to a readable prompt so older Ollama builds work too
-  const prompt = messages
-    .filter(m => m.role !== 'system' || messages.indexOf(m) === 0)
-    .map(m => {
-      if (m.role === 'system')    return `[System]: ${m.content}`;
-      if (m.role === 'user')      return `User: ${m.content}`;
-      if (m.role === 'assistant') return `Assistant: ${m.content}`;
-      return m.content;
-    })
-    .join('\n\n');
+// ── Shared streaming helpers ─────────────────────────────────
 
-  const res = await fetch('http://localhost:11434/api/generate', {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ model, prompt, stream: false }),
-  });
-  if (!res.ok) throw new Error('Failed to connect to local Ollama.');
-  console.log(res);
-  const data = await res.json();
-  return data.response;
+/**
+ * Read an SSE (Server-Sent Events) stream from the response body.
+ * Calls onChunk(text) for each decoded token and signals done when complete.
+ * Used by OpenAI-compatible APIs (OpenAI, Groq).
+ */
+async function readSSEStream(response, port, extractChunk) {
+  const reader  = response.body.getReader();
+  const decoder = new TextDecoder('utf-8');
+  let buffer    = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    // Keep the last (potentially incomplete) line in the buffer
+    buffer = lines.pop();
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed === 'data: [DONE]') continue;
+      if (!trimmed.startsWith('data: ')) continue;
+
+      try {
+        const json  = JSON.parse(trimmed.slice(6));
+        const chunk = extractChunk(json);
+        if (chunk) {
+          try { port.postMessage({ chunk }); } catch (_) { return; }
+        }
+      } catch {
+        // Malformed JSON line — skip silently
+      }
+    }
+  }
+
+  try { port.postMessage({ done: true }); } catch (_) {}
 }
 
-async function fetchOpenAI(messages, model, apiKey) {
+/**
+ * Read an NDJSON stream from the response body.
+ * Used by Ollama's /api/chat endpoint.
+ */
+async function readNDJSONStream(response, port, extractChunk) {
+  const reader  = response.body.getReader();
+  const decoder = new TextDecoder('utf-8');
+  let buffer    = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+
+      try {
+        const json  = JSON.parse(trimmed);
+        const chunk = extractChunk(json);
+        if (chunk) {
+          try { port.postMessage({ chunk }); } catch (_) { return; }
+        }
+        // Ollama sets done:true on the final summary object
+        if (json.done === true) {
+          try { port.postMessage({ done: true }); } catch (_) {}
+          return;
+        }
+      } catch {
+        // Malformed JSON line — skip silently
+      }
+    }
+  }
+
+  try { port.postMessage({ done: true }); } catch (_) {}
+}
+
+// ── Provider fetch functions ─────────────────────────────────
+
+/**
+ * Ollama — /api/chat with NDJSON streaming
+ */
+async function fetchOllama(messages, model, port) {
+  const url  = 'http://localhost:11434/api/chat';
+  const body = JSON.stringify({ model, messages, stream: true });
+
+  console.debug('[Ollama] POST', url);
+
+  let res;
+  try {
+    res = await fetch(url, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+    });
+  } catch (networkErr) {
+    console.error('[Ollama] network error:', networkErr);
+    throw new Error(
+      `Cannot reach Ollama at ${url}. Is it running? (${networkErr.message})`
+    );
+  }
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Ollama HTTP ${res.status}: ${errText.slice(0, 200)}`);
+  }
+
+  await readNDJSONStream(res, port, (json) => json.message?.content ?? null);
+}
+
+/**
+ * OpenAI — /v1/chat/completions with SSE streaming
+ */
+async function fetchOpenAI(messages, model, apiKey, port) {
   if (!apiKey) throw new Error('API Key missing.');
+
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method:  'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-    body:    JSON.stringify({ model, messages }),
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({ model, messages, stream: true }),
   });
-  const data = await res.json();
-  if (data.error) throw new Error(data.error.message);
-  return data.choices[0].message.content;
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`OpenAI HTTP ${res.status}: ${errText.slice(0, 200)}`);
+  }
+
+  await readSSEStream(res, port, (json) => json.choices?.[0]?.delta?.content ?? null);
 }
 
-async function fetchGemini(messages, model, apiKey) {
+/**
+ * Gemini — streamGenerateContent with SSE streaming
+ */
+async function fetchGemini(messages, model, apiKey, port) {
   if (!apiKey) throw new Error('API Key missing.');
+
   // Gemini uses a different role schema: 'user' / 'model'
   const contents = messages
     .filter(m => m.role !== 'system')
@@ -136,6 +254,7 @@ async function fetchGemini(messages, model, apiKey) {
       role:  m.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: m.content }],
     }));
+
   // Prepend system messages as the first user turn
   const systemText = messages
     .filter(m => m.role === 'system')
@@ -144,27 +263,72 @@ async function fetchGemini(messages, model, apiKey) {
   if (systemText) {
     contents.unshift({ role: 'user', parts: [{ text: systemText }] });
   }
+
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`,
     {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ contents }),
     }
   );
-  const data = await res.json();
-  if (data.error) throw new Error(data.error.message);
-  return data.candidates[0].content.parts[0].text;
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Gemini HTTP ${res.status}: ${errText.slice(0, 200)}`);
+  }
+
+  await readSSEStream(
+    res, port,
+    (json) => json.candidates?.[0]?.content?.parts?.[0]?.text ?? null
+  );
 }
 
-async function fetchGroq(messages, model, apiKey) {
+/**
+ * Groq — OpenAI-compatible endpoint with SSE streaming
+ */
+async function fetchGroq(messages, model, apiKey, port) {
   if (!apiKey) throw new Error('API Key missing.');
+
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method:  'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-    body:    JSON.stringify({ model, messages }),
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({ model, messages, stream: true }),
   });
-  const data = await res.json();
-  if (data.error) throw new Error(data.error.message);
-  return data.choices[0].message.content;
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Groq HTTP ${res.status}: ${errText.slice(0, 200)}`);
+  }
+
+  await readSSEStream(res, port, (json) => json.choices?.[0]?.delta?.content ?? null);
+}
+
+/**
+ * OpenRouter — OpenAI-compatible endpoint with SSE streaming.
+ * Requires two extra identification headers per OpenRouter's policy.
+ */
+async function fetchOpenRouter(messages, model, apiKey, port) {
+  if (!apiKey) throw new Error('API Key missing.');
+
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method:  'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+      'HTTP-Referer':  'https://github.com/my-ai-extension',
+      'X-Title':       'AI Assistant Extension',
+    },
+    body: JSON.stringify({ model, messages, stream: true }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`OpenRouter HTTP ${res.status}: ${errText.slice(0, 200)}`);
+  }
+
+  await readSSEStream(res, port, (json) => json.choices?.[0]?.delta?.content ?? null);
 }

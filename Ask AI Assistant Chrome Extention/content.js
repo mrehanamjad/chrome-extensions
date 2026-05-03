@@ -134,9 +134,47 @@ function saveHistory() {
   chrome.storage.local.set({ [STORAGE_KEY]: chatHistory });
 }
 
-/** Load stored history and replay every message into the UI. */
+/** Load stored history and replay every message into the UI.
+ *  Before replaying, checks that the user has configured a provider
+ *  and model. If not, renders the first-run empty state instead.
+ */
 function loadHistory(callback) {
-  chrome.storage.local.get(STORAGE_KEY, (result) => {
+  chrome.storage.local.get(['provider', 'model', 'apiKey', STORAGE_KEY], (result) => {
+    const provider = result.provider || 'ollama';
+    const model    = result.model    || '';
+    const apiKey   = result.apiKey   || '';
+
+    // Cloud providers require an API key; Ollama just needs a model name.
+    const needsApiKey = (provider !== 'ollama');
+    const isConfigured = model.trim() !== '' && (!needsApiKey || apiKey.trim() !== '');
+
+    if (!isConfigured) {
+      // ── Render the first-run / empty state ──────────────────
+      chatArea.innerHTML = '';  // clear any stale content
+
+      const emptyState = document.createElement('div');
+      emptyState.id = 'ai-empty-state';
+      emptyState.innerHTML = `
+        <div class="ai-empty-icon">✨</div>
+        <h3 class="ai-empty-title">Welcome to Ask AI</h3>
+        <p class="ai-empty-desc">
+          Configure your AI model to start chatting.<br>
+          Highlight any text on the page, then ask questions about it.
+        </p>
+        <button id="ai-empty-configure-btn">Configure Now</button>
+        <p class="ai-empty-hint">Supports Ollama, OpenAI, Gemini &amp; Groq</p>
+      `;
+      chatArea.appendChild(emptyState);
+
+      document.getElementById('ai-empty-configure-btn').addEventListener('click', () => {
+        chrome.runtime.sendMessage({ action: 'openSettings' });
+      });
+
+      // Do NOT call callback — don't auto-send until configured.
+      return;
+    }
+
+    // ── Configured: replay persisted history ─────────────────
     const saved = result[STORAGE_KEY];
     if (Array.isArray(saved) && saved.length > 0) {
       chatHistory = saved;
@@ -181,11 +219,42 @@ const chatArea   = document.getElementById('ask-ai-chat');
 const inputField = document.getElementById('ask-ai-input');
 
 /**
+ * Attach copy-code button handlers and syntax-highlight inline code
+ * inside an already-rendered AI message bubble.
+ * Called after every render update so newly injected buttons work.
+ * @param {HTMLElement} msgDiv
+ */
+function attachCodeHandlers(msgDiv) {
+  msgDiv.querySelectorAll('.ai-copy-code-btn').forEach((btn) => {
+    // Avoid double-attaching listeners
+    if (btn.dataset.listenerAttached) return;
+    btn.dataset.listenerAttached = 'true';
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const codeEl = btn.closest('.ai-code-block').querySelector('code');
+      navigator.clipboard.writeText(codeEl.innerText).then(() => {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'Copy';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    });
+  });
+
+  msgDiv.querySelectorAll('pre code:not(.hljs)').forEach((block) => {
+    hljs.highlightElement(block);
+  });
+}
+
+/**
  * Render a single message bubble into the DOM.
  * This is the pure DOM function — it does NOT touch storage.
  *
  * @param {'user'|'ai'} sender
  * @param {string} text — plain text for user msgs, markdown for AI.
+ * @returns {HTMLElement} the created bubble element
  */
 function renderMessage(sender, text) {
   const msgDiv = document.createElement('div');
@@ -193,28 +262,7 @@ function renderMessage(sender, text) {
 
   if (sender === 'ai') {
     msgDiv.innerHTML = marked.parse(text);
-
-    // Attach copy-code handlers
-    msgDiv.querySelectorAll('.ai-copy-code-btn').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const codeEl = btn.closest('.ai-code-block').querySelector('code');
-        navigator.clipboard.writeText(codeEl.innerText).then(() => {
-          btn.textContent = 'Copied!';
-          btn.classList.add('copied');
-          setTimeout(() => {
-            btn.textContent = 'Copy';
-            btn.classList.remove('copied');
-          }, 2000);
-        });
-      });
-    });
-
-    // Highlight any inline <code> that wasn't a fenced block
-    msgDiv.querySelectorAll('pre code:not(.hljs)').forEach((block) => {
-      hljs.highlightElement(block);
-    });
-
+    attachCodeHandlers(msgDiv);
   } else {
     // User messages: plain text only (no HTML injection risk)
     msgDiv.textContent = text;
@@ -222,6 +270,7 @@ function renderMessage(sender, text) {
 
   chatArea.appendChild(msgDiv);
   chatArea.scrollTop = chatArea.scrollHeight;
+  return msgDiv;
 }
 
 /**
@@ -236,7 +285,7 @@ function appendMessage(sender, text) {
   renderMessage(sender, text);
 }
 
-async function handleSend(promptOverride = null) {
+function handleSend(promptOverride = null) {
   const userText = promptOverride || inputField.value.trim();
   if (!userText && !currentSelection) return;
 
@@ -246,14 +295,62 @@ async function handleSend(promptOverride = null) {
   // Push the user turn into the sliding window BEFORE sending
   pushSession('user', userText || 'Analyze selection');
 
-  const loadingDiv = document.createElement('div');
-  loadingDiv.className = 'ai-msg ai-loading';
-  loadingDiv.innerHTML = '<span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span>';
-  chatArea.appendChild(loadingDiv);
+  // ── Open a long-lived port for streaming ──────────────────
+  const port = chrome.runtime.connect({ name: 'ai-stream' });
+
+  // Create the AI bubble immediately (empty) and remove the loading dots
+  const aiBubble = document.createElement('div');
+  aiBubble.className = 'ai-msg';
+  chatArea.appendChild(aiBubble);
   chatArea.scrollTop = chatArea.scrollHeight;
 
-  // Build the enriched payload
-  const payload = {
+  // Show a blinking cursor while we wait for the first chunk
+  aiBubble.innerHTML = '<span class="ai-stream-cursor"></span>';
+
+  let accumulated = '';  // full response text built up chunk by chunk
+  let streamStarted = false;
+
+  port.onMessage.addListener((msg) => {
+    if (msg.error) {
+      aiBubble.innerHTML = marked.parse(`**Error:** ${msg.error}`);
+      // Persist error message
+      chatHistory.push({ sender: 'ai', text: `**Error:** ${msg.error}` });
+      saveHistory();
+      port.disconnect();
+      return;
+    }
+
+    if (msg.chunk) {
+      if (!streamStarted) {
+        streamStarted = true;
+        aiBubble.innerHTML = ''; // remove the cursor placeholder
+      }
+      accumulated += msg.chunk;
+      // Live-render the accumulated markdown as chunks arrive
+      aiBubble.innerHTML = marked.parse(accumulated);
+      attachCodeHandlers(aiBubble);
+      chatArea.scrollTop = chatArea.scrollHeight;
+    }
+
+    if (msg.done) {
+      // Final render pass — ensures the last partial chunk is clean
+      aiBubble.innerHTML = marked.parse(accumulated);
+      attachCodeHandlers(aiBubble);
+      chatArea.scrollTop = chatArea.scrollHeight;
+
+      // Persist the complete AI reply
+      chatHistory.push({ sender: 'ai', text: accumulated });
+      saveHistory();
+
+      // Push into session sliding window for multi-turn context
+      pushSession('assistant', accumulated);
+
+      port.disconnect();
+    }
+  });
+
+  // Send the enriched payload through the port
+  port.postMessage({
     action:      'askAI',
     prompt:      userText,
     context:     currentSelection,
@@ -261,17 +358,6 @@ async function handleSend(promptOverride = null) {
     // Send a copy of the window EXCLUDING the message we just added
     // so background.js can prepend it as prior conversation
     chatHistory: sessionHistory.slice(0, -1),
-  };
-
-  chrome.runtime.sendMessage(payload, (response) => {
-    loadingDiv.remove();
-    if (response.error) {
-      appendMessage('ai', `**Error:** ${response.error}`);
-    } else {
-      // Push the AI reply into the sliding window
-      pushSession('assistant', response.reply);
-      appendMessage('ai', response.reply);
-    }
   });
 }
 
@@ -321,6 +407,9 @@ toolbar.querySelectorAll('.ai-toolbar-action').forEach((btn) => {
 
 document.getElementById('ask-ai-close').addEventListener('click', () => {
   popup.style.display = 'none';
+  // Reset so the config check re-runs on next open.
+  // This ensures the empty state disappears after the user configures a model.
+  historyLoaded = false;
 });
 
 
